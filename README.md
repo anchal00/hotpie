@@ -1,2 +1,5 @@
-# hotpie
-Hot Reloading for Python modules 🌀
+# hotpie 🌀
+Hot Reloading for Python modules
+
+## Usage
+<TODO>
