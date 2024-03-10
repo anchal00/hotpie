@@ -1,7 +1,7 @@
 import fnmatch
 import hashlib
 import os
-
+import pathlib
 
 _FILE_HASHES = {}
 
@@ -25,9 +25,18 @@ def has_file_changed(filename):
     return False
 
 
-def get_py_files_in_dir(dir):
+def get_py_files_in_dirs(dirs):
     files = []
-    for *_, filenames in os.walk(dir):
-        filenames = fnmatch.filter(filenames, "*.py")
-        files.extend(filenames)
+    if not dirs:
+        return files
+    for dir in dirs:
+        for dirpath, subdirs, filenames in os.walk(dir):
+            filenames = fnmatch.filter(filenames, "*.py")
+            files.extend(
+                [pathlib.PosixPath(dirpath, filename) for filename in filenames]
+            )
+            subdirs = list(filter(lambda subdir: subdir in [".git", "__pycache__"], subdirs))
+            py_files_in_subdirs = get_py_files_in_dirs(subdirs)
+            if py_files_in_subdirs:
+                files.extend([pathlib.PosixPath(dirpath, path) for path in py_files_in_subdirs])
     return files
