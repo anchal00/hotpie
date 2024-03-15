@@ -2,6 +2,7 @@ import fnmatch
 import hashlib
 import os
 import pathlib
+from typing import List, Set
 
 _FILE_HASHES = {}
 
@@ -25,18 +26,29 @@ def has_file_changed(filename):
     return False
 
 
-def get_py_files_in_dirs(dirs):
+def _get_excluded_dirs() -> Set[str]:
+    exlusion_list_config_file = ".pieignore"
+    excluded_dirs = {pathlib.PosixPath(os.getcwd(), file) for file in [".git", "__pycache__"]}
+    if not os.path.exists(exlusion_list_config_file):
+        return excluded_dirs
+    with open(exlusion_list_config_file, "r") as file:
+        lines = file.readlines()
+        excluded_dirs.update({pathlib.PosixPath(os.getcwd(), line.replace("\n", "")) for line in lines})
+    return excluded_dirs
+
+
+def get_py_files_in_dirs(dirs: List[str]):
     files = []
     if not dirs:
         return files
+    excl = _get_excluded_dirs()
     for dir in dirs:
-        for dirpath, subdirs, filenames in os.walk(dir):
+        for dirpath, _, filenames in os.walk(dir):
             filenames = fnmatch.filter(filenames, "*.py")
             files.extend(
-                [pathlib.PosixPath(dirpath, filename) for filename in filenames]
+                [
+                    pathlib.PosixPath(dirpath, f_name) for f_name in filenames
+                    if pathlib.PosixPath(dirpath, f_name).parent not in excl
+                ]
             )
-            subdirs = list(filter(lambda subdir: subdir in [".git", "__pycache__"], subdirs))
-            py_files_in_subdirs = get_py_files_in_dirs(subdirs)
-            if py_files_in_subdirs:
-                files.extend([pathlib.PosixPath(dirpath, path) for path in py_files_in_subdirs])
     return files
